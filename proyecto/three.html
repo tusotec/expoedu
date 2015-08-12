@@ -10,6 +10,7 @@
   <script  type="text/javascript" src="js/DDSLoader.js"></script>
   <script  type="text/javascript" src="js/MTLLoader.js"></script>
   <script type="text/javascript" src="js/THREE.TargetCamera.js"></script>
+  <script type="text/javascript" src="js/eventosKey.js"></script>
   
   <script id="vertexShader" type="x-shader/x-vertex">
   varying vec2 vUv;
@@ -58,9 +59,11 @@
 
   // camara target
   var camera = new THREE.TargetCamera(45, 4/3, 0.1, 1000);
-
-  document.addEventListener( 'keypress', onDocumentKeyPress, false );
-
+  var keyPressed ={};
+  var charPressed ={};
+//  document.addEventListener( 'keypress', onDocumentKeyPress, false );
+document.addEventListener('keydown', functionKeydown, false);
+document.addEventListener('keyup', functionKeyup, false);
   document.addEventListener( 'mousedown', onMouseDown, false );
   document.addEventListener( 'mousewheel', onMouseWheel, false );
   document.addEventListener( 'mousemove', onMouseMove, false );
@@ -201,11 +204,11 @@
   addCube();
 
   var center = {x:0, y:1, z:0};
-
+  var tecla = {};
   var antX = 300;
   var antY = 0;
   var mouseKeep = false;
-  var c, d;
+  var moveY, clickX;
 
   // eventos raton
         function onMouseDown( event ) 
@@ -215,98 +218,20 @@
 
         function onMouseMove( event ) 
         { 
-             c = ((178-event.clientY) / 200);
-             d = event.clientX;            
+             moveY = ((178-event.clientY) / 200);
+             clickX = event.clientX;            
         }
 
         function onMouseUp(  event  ) 
         {
           mouseKeep = false;
         }
-
-        function onMouseWheel( event )
-        {
-          console.log('onMouseWheel');
-        }
-
-  // eventos del teclado  
-        function onDocumentKeyPress( event )
-        {
-
-            var charCode = event.which;
-            var keyCode = event.keyCode;
-
-            if ( charCode == 8 ) 
-            {
-            event.preventDefault();
-            }else{
-
-                if(charCode == 32)// barra espaciadora
-                {
-                  cube.position.y += 1;
-                  camera.lookAt(new THREE.Vector3(cube.position.x, cube.position.y - 1, cube.position.z));   
-                }
-
-                if(charCode == 119) // w
-                {
-                  cube.position.z = cube.position.z - velocidadDesplazamiento * Math.cos( cube.rotation.y );
-                  cube.position.x = cube.position.x - velocidadDesplazamiento * Math.sin( cube.rotation.y );
-                }
-
-                if(charCode == 115)// s
-                {
-                  cube.position.z = cube.position.z + velocidadDesplazamiento * Math.cos( cube.rotation.y );
-                  cube.position.x = cube.position.x + velocidadDesplazamiento * Math.sin( cube.rotation.y );                  
-                }
-
-                if(charCode == 100)// d
-                {
-                  cube.rotation.y -= 0.02; 
-                }
-
-                if(charCode == 97)// a
-                {
-                  cube.rotation.y += 0.02;
-                }
-
-                if(keyCode == 38) // flecha arriba
-                {
-                  cube.position.z = cube.position.z - velocidadDesplazamiento * Math.cos( cube.rotation.y );
-                  cube.position.x = cube.position.x - velocidadDesplazamiento * Math.sin( cube.rotation.y );
-                }
-
-                if(keyCode == 40) // flecha abajo
-                {
-                  cube.position.z = cube.position.z + velocidadDesplazamiento * Math.cos( cube.rotation.y );
-                  cube.position.x = cube.position.x + velocidadDesplazamiento * Math.sin( cube.rotation.y );   
-                }
-
-                if(keyCode == 39) // flecha derecha
-                {
-                  cube.rotation.y -= 0.02; 
-                }
-
-                if(keyCode == 37) // flecha izquierda
-                {
-                  cube.rotation.y += 0.02;
-                }
-           
-            }
-
-        }
-
   function render() {
     var delta = clock.getDelta();
-    
-    if(mouseKeep)
-    {
-      camera.lookAt(new THREE.Vector3(cube.position.x, cube.position.y+c, cube.position.z));                   
-      if(  d > 400 )
-        cube.rotation.y -= 0.1;
-      if(  d < 200 )
-        cube.rotation.y += 0.1;
-    }
 
+    eventosKey();
+
+    //gravedad
     if(cube.position.y  >= 0.8 )
     {
       cube.position.y -= 0.2;
