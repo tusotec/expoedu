@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Prueba de Three JS</title>
+  <script type="text/javascript" src="js/three.js"></script>
+  <script type="text/javascript" src="js/OBJMTLLoader.js"></script>
+  <script type="text/javascript" src="js/OBJLoader.js"></script>
+  
+  <script  type="text/javascript" src="js/DDSLoader.js"></script>
+  <script  type="text/javascript" src="js/MTLLoader.js"></script>
+  <script type="text/javascript" src="js/THREE.TargetCamera.js"></script>
+  
+  <script id="vertexShader" type="x-shader/x-vertex">
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix *
+          modelViewMatrix * vec4(position, 1.0 );
+  }
+</script>
+
+<script id="fragmentShader" type="x-shader/x-fragment">
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D colTex;
+  uniform sampler2D shadTex;
+  void main(void) {
+    gl_FragColor = texture2D(colTex, vUv) * texture2D(shadTex, vUv);
+    //gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  }
+</script>
+
+</head>
+<body>
+<h1>Prueba de Three JS</h1>
+<div id="renderDiv"></div>
+
+<p>
+<span id="loadingSpan" style="display:inline;">Cargando Stands...</span>
+<span id="loadedSpan" style="display:none;">
+  <a href="javascript:addStand01();">Stand01</a>
+  <a href="javascript:addStand02();">Stand02</a>
+</span>
+</p>
+<p>Modelo rotando. El cubo azul representa la altura de una persona (1.6 metros).
+<a href="javascript:removeCube();">Quitar</a>
+<a href="javascript:addCube();">Añadir</a>
+</p>
+</body>
+<script type="text/javascript">
+
+  var renderer = new THREE.WebGLRenderer();
+  renderer.setSize(640, 480);
+  renderDiv.appendChild(renderer.domElement);
+
+  var scene = new THREE.Scene();
+  /*
+  camara de perspectiva
+  var camera = new THREE.PerspectiveCamera(45, 4/3, 0.1, 1000);
+        camera.position.x = 10+ 00;
+        camera.position.y = 2;
+        camera.position.z = 10+ 3.5;*/
+  // camara target
+  var camera = new THREE.TargetCamera(45, 4/3, 0.1, 1000);
+
+  document.addEventListener( 'keypress', onDocumentKeyPress2, false );
+
+  document.addEventListener( 'mousedown', onMouseDown, false );
+  document.addEventListener( 'mousewheel', onMouseWheel, false );
+  document.addEventListener( 'mousemove', onMouseMove, false );
+  document.addEventListener( 'mouseup', onMouseUp, false );
+
+  var light = new THREE.AmbientLight(0xffffff);
+
+  scene.add(light);
+
+  var clock = new THREE.Clock();
+
+  var boxGeom = new THREE.BoxGeometry(0.5,1.6,0.5);
+  var boxMat = new THREE.MeshBasicMaterial({color:0x0000ff});
+  var cube = new THREE.Mesh(boxGeom, boxMat);
+  cube.position.y = 0.8;
+  cube.position.x = 10;
+  cube.position.z = 10;
+  cube.name = "testCube";
+ // camera.lookAt(cube.position);
+ camera.addTarget({
+        name: 'myTarget',
+        targetObject: cube,
+        cameraPosition: new THREE.Vector3(0, 0, 3),
+        fixed: false,
+        stiffness: 0.3,
+        matchRotation: true
+    });    
+
+ camera.setTarget( 'myTarget' );
+
+  function LoadStand(model, diff, occ, func) {
+    var colorTexture = THREE.ImageUtils.loadTexture(diff);
+    var shadeTexture = THREE.ImageUtils.loadTexture(occ);
+    var uniforms = {
+      'color': {type: 'f', value: 0.0},
+      'colTex': {type: 't', value: colorTexture},
+      'shadTex': {type: 't', value: shadeTexture}
+    };
+    var material = new THREE.ShaderMaterial({
+      'fog': false,
+      'uniforms': uniforms,
+      'vertexShader': vertexShader.innerHTML,
+      'fragmentShader': fragmentShader.innerHTML
+    });
+    
+    //var material = new THREE.MeshBasicMaterial({map:colorTexture});
+    var standGeom, stand;
+
+    var loader = new THREE.JSONLoader();
+    loader.load(model, function(obj) {
+      standGeom = obj;
+      stand = new THREE.Mesh(obj, material);
+      func(stand);
+    });
+  }
+
+  var stand01;
+  var stand02;
+  var pabellon;
+  var velocidadDesplazamiento = 0.1;
+  var loaded = false
+  // cargar pabellon
+  var onProgress = function ( xhr ) {
+          if ( xhr.lengthComputable ) {
+            var percentComplete = xhr.loaded / xhr.total * 100;
+           // console.log( Math.round(percentComplete, 2) + '% downloaded' );
+          }
+        };
+
+        var onError = function ( xhr ) {
+        };
+    var loader = new THREE.OBJMTLLoader();
+    loader.load( '../export02/fachada.obj', '../export02/fachada.mtl', function ( object ) {
+
+          //object.position.y = -80;
+          pabellon = object;
+          pabellon.scale.x = 0.009;
+          pabellon.scale.y = 0.009;
+          pabellon.scale.z = 0.009;
+          scene.add( pabellon );
+
+        }, onProgress, onError );
+  //--------------------------------------------------------------------------------
+  function setLoaded(){
+    if (loaded) {
+      loadingSpan.style.display = "none";
+      loadedSpan.style.display = "inline";
+
+      addStand02();
+    } else {
+      loaded = true;
+    }
+  }
+
+  LoadStand("stand01.js", "textures/diff01.png",
+            "textures/occ01.png", function (obj) {
+    stand01 = obj;
+    setLoaded();
+  });
+
+  LoadStand("stand02.js", "textures/diff02.png",
+            "textures/occ02.png", function (obj) {
+    stand02 = obj;
+    setLoaded();
+  });
+
+  function addStand01 () {
+    scene.remove(stand02);
+    scene.add(stand01);
+  
+  }
+
+  function addStand02 () {
+    scene.remove(stand01);
+    scene.add(stand02);
+  }
+
+  var rotPos = 0;
+  var camDist = 5;
+ 
+  function rotateCam(obj, center, dist, value) {
+    val = value * 3.14159268 * 2;
+    obj.rotation.y = val;
+
+    obj.position.x = Math.sin(val)*dist + center.x;
+    obj.position.y = center.y;
+    obj.position.z = Math.cos(val)*dist + center.z;
+  }
+
+  function addCube() {
+    scene.add(cube);
+  }
+
+  function removeCube() {
+    scene.remove(cube);
+  }
+
+  addCube();
+
+  var center = {x:0, y:1, z:0};
+  var clickUp = true;
+  var antX = 300;
+  var antY = 0;
+
+  // eventos raton
+        function onMouseDown( event ) 
+        {
+         clickUp = false;
+        }
+
+        function onMouseMove( event ) 
+        {
+          if(!clickUp)
+          {
+            
+            if(300 - event.clientX > 0 )
+              cube.rotation.y += 0.01;
+            else
+              cube.rotation.y -= 0.01;
+
+          }else{
+            antX = 0;
+          }
+          
+        }
+
+        function onMouseUp(  event  ) 
+        {
+          clickUp = true;
+        }
+
+        function onMouseWheel( event )
+        {
+          console.log('onMouseWheel');
+        }
+
+  // eventos del teclado  
+        function onDocumentKeyPress2( event )
+        {
+
+            var keyCode = event.which;
+
+            if ( keyCode == 8 ) 
+            {
+            event.preventDefault();
+            }else{
+
+                switch(keyCode) {
+                    case 32:
+                    cube.position.y += 2;
+                        break;
+                    case 115:
+                        // left key pressed
+                        break;
+                    case 119:
+                    
+                    cube.position.z = cube.position.z - velocidadDesplazamiento * Math.cos( cube.rotation.y );
+                    cube.position.x = cube.position.x - velocidadDesplazamiento * Math.sin( cube.rotation.y );
+
+                        break;
+                    case 100:
+                    cube.rotation.y -= 0.02;
+                        break;
+                    case 97:
+                    cube.rotation.y += 0.02;
+                        break;  
+                }  
+           
+            }
+
+        }
+
+  function render() {
+    var delta = clock.getDelta();
+
+    if(cube.position.y  >= 1.6 )
+      cube.position.y -= 0.2; 
+    renderer.render(scene, camera);
+    camera.update();
+   // camera.lookAt(foco);
+/*
+    rotPos += 0.00;
+    if (rotPos > 1) {rotPos -= 1;}
+    rotateCam(camera, center, camDist, rotPos);
+*/
+    setTimeout(function () {requestAnimationFrame(render);}, 1000/12);
+    //requestAnimationFrame(render);
+  }
+
+  render();
+
+</script>
+</html>
